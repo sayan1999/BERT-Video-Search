@@ -74,7 +74,7 @@ if __name__ == "__main__":
                     ):
                         col1, col2 = st.columns([1, 4])
                         col1.button(
-                            "Jump to time: " + str(start),
+                            "Jump to section ",
                             key=" ".join(
                                 [
                                     "Jump",
