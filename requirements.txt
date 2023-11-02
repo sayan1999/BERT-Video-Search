@@ -3,4 +3,5 @@ youtube_transcript_api
 streamlit_player
 streamlit
 pandas
+streamlit-analytics
 faiss-cpu
