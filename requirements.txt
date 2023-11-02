@@ -1,0 +1,6 @@
+sentence_transformers
+youtube_transcript_api
+streamlit_player
+streamlit
+pandas
+faiss-cpu
