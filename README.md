@@ -1,11 +1,9 @@
 ---
 title: Bert Video Search And Jump
-emoji: 📚
-colorFrom: blue
-colorTo: blue
-sdk: streamlit
-sdk_version: 1.28.0
-app_file: app.py
+emoji: 📊
+colorFrom: yellow
+colorTo: gray
+sdk: docker
 pinned: false
 ---
 
