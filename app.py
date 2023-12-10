@@ -35,9 +35,13 @@ def store_embeddings(subtitle_df):
 def search(subtitle_df, query, top_k, index):
     query_vector = MODEL.encode([query])
     top_k = index.search(query_vector, top_k)
+    distances = top_k[0].tolist()[0]
     top_k_ids = top_k[1].tolist()[0]
     top_k_ids = list(np.unique(top_k_ids))
-    return subtitle_df.iloc[top_k_ids]
+    resultdf = subtitle_df.iloc[top_k_ids].copy()
+    resultdf["dist"] = distances
+    print(distances)
+    return resultdf
 
 
 @st.cache_data
@@ -47,64 +51,70 @@ def get_relevant_line(subtitle_df, searchphrase):
 
 
 if __name__ == "__main__":
-    init()
-    with streamlit_analytics.track(unsafe_password="credict123"):
-        st.set_page_config(page_title="Bert-Video-Search-and-Jump")
-        st.title("Bert-Video-Search-and-Jump")
-        st.write(
-            "**An AI based tool to semantic search through an Youtube video subtitles and jump to relevant sections**"
-        )
-        vid_url = st.text_input(
-            "Youtube Video URL", placeholder="Enter Youtube video url here"
-        )
-        if vid_url:
-            vid_placeholder = st.empty()
-
-            with vid_placeholder.container():
-                st_player(vid_url, playing=True)
-            searchphrase = st.text_input(
-                "Enter Search keywords here relevant to the topic you are searching for in this video"
+    try:
+        init()
+        with streamlit_analytics.track(unsafe_password="credict123"):
+            st.set_page_config(page_title="Bert-Video-Search-and-Jump")
+            st.title("Bert-Video-Search-and-Jump")
+            st.write(
+                "**An AI based tool to semantic search through an Youtube video subtitles and jump to relevant sections**"
             )
-            analysis_placeholder = st.empty()
-            analysis_placeholder.empty()
-            subtitle_df = parse_subtitles(vid_url)
-            subtitle_df.to_csv("subtitles.csv")
+            vid_url = st.text_input(
+                "Youtube Video URL", placeholder="Enter Youtube video url here"
+            )
+            if vid_url:
+                vid_placeholder = st.empty()
 
-            if searchphrase:
-                print("\n\n\n Searching", searchphrase)
-                search_results = get_relevant_line(subtitle_df, searchphrase)
-                # print(df)
-                with analysis_placeholder.container():
-                    if len(search_results):
-                        st.text("Relevant sections below: ")
-                        for cap, start in zip(
-                            search_results["text"].to_list(),
-                            search_results["start"].to_list(),
-                        ):
-                            col1, col2 = st.columns([1, 4])
-                            col1.button(
-                                "Jump to section ",
-                                key=" ".join(
-                                    [
-                                        "Jump",
-                                        vid_url,
-                                        str(start),
-                                        str(random.randint(0, 9999999)),
-                                        cap,
-                                    ]
-                                ),
+                with vid_placeholder.container():
+                    st_player(vid_url, playing=True)
+                searchphrase = st.text_input(
+                    "Enter Search keywords here relevant to the topic you are searching for in this video"
+                )
+                analysis_placeholder = st.empty()
+                analysis_placeholder.empty()
+                subtitle_df = parse_subtitles(vid_url)
+                subtitle_df.to_csv("subtitles.csv")
+
+                if searchphrase:
+                    print("\n\n\n Searching", searchphrase)
+                    search_results = get_relevant_line(subtitle_df, searchphrase)
+                    # print(df)
+                    with analysis_placeholder.container():
+                        if len(search_results):
+                            st.text("Relevant sections below: ")
+                            for cap, start in zip(
+                                search_results["text"].to_list(),
+                                search_results["start"].to_list(),
+                            ):
+                                col1, col2 = st.columns([1, 4])
+                                col1.button(
+                                    "Jump to section ",
+                                    key=" ".join(
+                                        [
+                                            "Jump",
+                                            vid_url,
+                                            str(start),
+                                            str(random.randint(0, 9999999)),
+                                            cap,
+                                        ]
+                                    ),
+                                )
+
+                                col2.markdown(cap)
+                        else:
+                            st.text("No relevant section found, try something else ...")
+
+                for k, v in st.session_state.items():
+                    if k.startswith("Jump") and v is True:
+                        print(k.split(maxsplit=3))
+                        _, new_url, start, _ = k.split(maxsplit=3)
+                        vid_placeholder.empty()
+                        with vid_placeholder.container():
+                            st_player(
+                                vid_url + "&t={}s".format(round(float(start))),
+                                playing=True,
                             )
 
-                            col2.markdown(cap)
-                    else:
-                        st.text("No relevant section found, try something else ...")
-
-            for k, v in st.session_state.items():
-                if k.startswith("Jump") and v is True:
-                    print(k.split(maxsplit=3))
-                    _, new_url, start, _ = k.split(maxsplit=3)
-                    vid_placeholder.empty()
-                    with vid_placeholder.container():
-                        st_player(
-                            vid_url + "&t={}s".format(round(float(start))), playing=True
-                        )
+    except BaseException as e:
+        print(e)
+        st.text("Some error occured, please ensure youtube URL is correct")
