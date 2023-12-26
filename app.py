@@ -1,4 +1,4 @@
-import random
+import random, traceback
 from urllib.parse import urlparse
 import pandas as pd
 from streamlit_player import st_player
@@ -7,21 +7,51 @@ import streamlit as st
 from sentence_transformers import SentenceTransformer
 import faiss, numpy as np
 import streamlit_analytics
+from recursive_summary import Summarizer
 
-MODEL = None
+
+# def set_page_config():
+#     """Sets the page configuration."""
+#     st.set_page_config(
+#         page_title="Sephora vs Ulta",
+#         layout="wide",
+#     )
+
+
+# set_page_config()
+
+
+@st.cache_resource
+def init():
+    CLIENT = Summarizer()
+    MODEL = SentenceTransformer("msmarco-distilbert-base-dot-prod-v3")
+    return CLIENT, MODEL
+
+
+def summarize(txt):
+    global CLIENT
+    print(">>>>>>", CLIENT)
+    return CLIENT.summarize(txt)
+
+
+@st.cache_data
+def dl_subtitle(url):
+    url_data = urlparse(url)
+    print("Id:", url_data.query[2::])
+    return YouTubeTranscriptApi.get_transcript(url_data.query[2::])
+
+
+@st.cache_data
+def get_summary(url):
+    subtitles = dl_subtitle(url)
+    text_st = " ".join(pd.DataFrame(subtitles)["text"])
+    return summarize(text_st)
 
 
 @st.cache_data
 def parse_subtitles(url):
-    url_data = urlparse(url)
-    print("Id:", url_data.query[2::])
-    subtitles = YouTubeTranscriptApi.get_transcript(url_data.query[2::])
+    subtitles = dl_subtitle(url)
     return pd.DataFrame(subtitles)
-
-
-def init():
-    global MODEL
-    MODEL = SentenceTransformer("msmarco-distilbert-base-dot-prod-v3")
 
 
 def store_embeddings(subtitle_df):
@@ -52,9 +82,9 @@ def get_relevant_line(subtitle_df, searchphrase):
 
 if __name__ == "__main__":
     try:
-        init()
+        CLIENT, MODEL = init()
         with streamlit_analytics.track(unsafe_password="credict123"):
-            st.set_page_config(page_title="Bert-Video-Search-and-Jump")
+            # st.set_page_config(page_title="Bert-Video-Search-and-Jump")
             st.title("Bert-Video-Search-and-Jump")
             st.write(
                 "**An AI based tool to semantic search through an Youtube video subtitles and jump to relevant sections**"
@@ -115,6 +145,12 @@ if __name__ == "__main__":
                                 playing=True,
                             )
 
+                summary = get_summary(vid_url)
+                if summary:
+                    st.subheader("Summary of the video: \n\n")
+                    st.markdown(summary)
     except BaseException as e:
         print(e)
+        traceback.print_exc()
+
         st.text("Some error occured, please ensure youtube URL is correct")

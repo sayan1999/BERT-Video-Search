@@ -5,3 +5,8 @@ streamlit
 pandas
 streamlit-analytics
 faiss-cpu
+tiktoken
+langchain
+google-generativeai
+langchain-google-genai
+python-dotenv
