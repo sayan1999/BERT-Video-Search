@@ -2,6 +2,7 @@ import math, os
 from dotenv import load_dotenv
 import os
 import google.generativeai as genai
+import streamlit as st
 
 from langchain_google_genai import ChatGoogleGenerativeAI
 
@@ -29,9 +30,10 @@ def get_client():
         load_dotenv(Path(".env"))
         API_TOKEN = st.secrets["GOOGLE_API_KEY"]
     except:
-        import streamlit as st
-
-        API_TOKEN = st.secrets["GOOGLE_API_KEY"]
+        try:
+            API_TOKEN = st.secrets["GOOGLE_API_KEY"]
+        except:
+            API_TOKEN = os.getenv("GOOGLE_API_KEY")
 
     llm = ChatGoogleGenerativeAI(model="gemini-pro")
     return llm

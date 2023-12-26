@@ -8,6 +8,7 @@ from sentence_transformers import SentenceTransformer
 import faiss, numpy as np
 import streamlit_analytics
 from recursive_summary import Summarizer
+from youtube_transcript_api._errors import NoTranscriptFound
 
 
 # def set_page_config():
@@ -38,14 +39,26 @@ def summarize(txt):
 def dl_subtitle(url):
     url_data = urlparse(url)
     print("Id:", url_data.query[2::])
-    return YouTubeTranscriptApi.get_transcript(url_data.query[2::])
+    try:
+        return YouTubeTranscriptApi.get_transcript(url_data.query[2::])
+    except BaseException as e:
+        print(
+            ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\nCould not find english transcript, looking for translation",
+        )
+        for t in YouTubeTranscriptApi.list_transcripts(url_data.query[2::]):
+            return t.translate("en").fetch()
 
 
 @st.cache_data
 def get_summary(url):
     subtitles = dl_subtitle(url)
     text_st = " ".join(pd.DataFrame(subtitles)["text"])
-    return summarize(text_st)
+    try:
+        return summarize(text_st)
+    except BaseException as e:
+        print(e)
+        traceback.print_exc()
+        return e
 
 
 @st.cache_data
