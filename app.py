@@ -11,47 +11,61 @@ from recursive_summary import Summarizer
 from youtube_transcript_api._errors import NoTranscriptFound
 
 
-# def set_page_config():
-#     """Sets the page configuration."""
-#     st.set_page_config(
-#         page_title="Sephora vs Ulta",
-#         layout="wide",
-#     )
-
-
-# set_page_config()
-
-
 @st.cache_resource
 def init():
-    CLIENT = Summarizer()
-    MODEL = SentenceTransformer("msmarco-distilbert-base-dot-prod-v3")
-    return CLIENT, MODEL
+    summarizer = Summarizer()  # Summarizer for generating concise summaries
+    model = SentenceTransformer(
+        "msmarco-distilbert-base-dot-prod-v3"
+    )  # SentenceTransformer model for semantic search
+    return summarizer, model
 
 
-def summarize(txt):
-    global CLIENT
-    print(">>>>>>", CLIENT)
-    return CLIENT.summarize(txt)
+# Function to summarize text
+def summarize(text):
+    return summarizer.summarize(
+        text
+    )  # Generate summary using the initialized summarizer
 
 
+# Function to download subtitles from a YouTube video
 @st.cache_data
-def dl_subtitle(url):
-    url_data = urlparse(url)
-    print("Id:", url_data.query[2::])
+def download_subtitles(url):
+    video_id = urlparse(url).query[2::]  # Extract video ID from URL
+
     try:
-        return YouTubeTranscriptApi.get_transcript(url_data.query[2::])
-    except BaseException as e:
-        print(
-            ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>\nCould not find english transcript, looking for translation",
+        # Attempt to fetch English transcript directly
+        return YouTubeTranscriptApi.get_transcript(video_id)
+    except NoTranscriptFound:
+        # Handle case where English transcript is not available
+        st.error(
+            "English transcript not found. Searching for available translations..."
         )
-        for t in YouTubeTranscriptApi.list_transcripts(url_data.query[2::]):
-            return t.translate("en").fetch()
+
+        # Attempt to fetch and translate available transcripts
+        for transcript in YouTubeTranscriptApi.list_transcripts(video_id):
+            try:
+                return transcript.translate("en").fetch()
+            except Exception as e:
+                st.warning(f"Error translating transcript: {e}")
+
+        st.error("No usable transcripts found.")
+        return None
 
 
+# Function to parse subtitles into a DataFrame
+@st.cache_data
+def parse_subtitles(url):
+    subtitles = download_subtitles(url)
+    if subtitles:
+        return pd.DataFrame(subtitles)
+    else:
+        return None
+
+
+# Function to summarize subtitles
 @st.cache_data
 def get_summary(url):
-    subtitles = dl_subtitle(url)
+    subtitles = download_subtitles(url)
     text_st = " ".join(pd.DataFrame(subtitles)["text"])
     try:
         return summarize(text_st)
@@ -61,67 +75,71 @@ def get_summary(url):
         return e
 
 
-@st.cache_data
-def parse_subtitles(url):
-    subtitles = dl_subtitle(url)
-    return pd.DataFrame(subtitles)
-
-
+# Function to create embeddings for semantic search
 def store_embeddings(subtitle_df):
-    encoded_data = MODEL.encode(subtitle_df.text.tolist())
-    encoded_data = np.asarray(encoded_data.astype("float32"))
+    embeddings = model.encode(subtitle_df["text"].tolist())
     index = faiss.IndexIDMap(faiss.IndexFlatIP(768))
-    index.add_with_ids(encoded_data, np.array(range(0, len(subtitle_df))))
+    index.add_with_ids(embeddings.astype("float32"), np.arange(len(subtitle_df)))
     return index
 
 
+# Function to perform semantic search within subtitles
 def search(subtitle_df, query, top_k, index):
-    query_vector = MODEL.encode([query])
-    top_k = index.search(query_vector, top_k)
-    distances = top_k[0].tolist()[0]
-    top_k_ids = top_k[1].tolist()[0]
-    top_k_ids = list(np.unique(top_k_ids))
-    resultdf = subtitle_df.iloc[top_k_ids].copy()
-    resultdf["dist"] = distances
-    print(distances)
-    return resultdf
+    query_embedding = model.encode([query])
+    distances, indices = index.search(query_embedding, top_k)
+    result_df = subtitle_df.iloc[indices.tolist()[0]].copy()
+    result_df["distance"] = distances.tolist()[0]
+    return result_df
 
 
+# Function to retrieve relevant lines based on a search phrase
 @st.cache_data
-def get_relevant_line(subtitle_df, searchphrase):
+def get_relevant_lines(subtitle_df, search_phrase):
     index = store_embeddings(subtitle_df)
-    return search(subtitle_df, searchphrase, 6, index)
+    return search(subtitle_df, search_phrase, 6, index)
 
+
+# --------------------------------------------------
+# Main application logic
+# --------------------------------------------------
 
 if __name__ == "__main__":
     try:
-        CLIENT, MODEL = init()
+        # Initialize required components
+        summarizer, model = init()
+
         with streamlit_analytics.track(unsafe_password="credict123"):
-            # st.set_page_config(page_title="Bert-Video-Search-and-Jump")
+            # Set page title and description
             st.title("Bert-Video-Search-and-Jump")
             st.write(
-                "**An AI based tool to semantic search through an Youtube video subtitles and jump to relevant sections**"
+                "**An AI-based tool to semantic search through YouTube video subtitles and jump to relevant sections**"
             )
-            vid_url = st.text_input(
-                "Youtube Video URL", placeholder="Enter Youtube video url here"
-            )
-            if vid_url:
-                vid_placeholder = st.empty()
 
+            # Prompt for YouTube video URL
+            vid_url = st.text_input(
+                "YouTube Video URL", placeholder="Enter YouTube video url here"
+            )
+
+            if vid_url:
+                # Display video player
+                vid_placeholder = st.empty()
                 with vid_placeholder.container():
                     st_player(vid_url, playing=True)
+
+                # Handle subtitle parsing and analysis
+                analysis_placeholder = st.empty()  # Container for analysis results
+                subtitle_df = parse_subtitles(vid_url)  # Parse subtitles
+                subtitle_df.to_csv("subtitles.csv")  # Save subtitles to CSV
+
+                # Prompt for search phrase
                 searchphrase = st.text_input(
                     "Enter Search keywords here relevant to the topic you are searching for in this video"
                 )
-                analysis_placeholder = st.empty()
-                analysis_placeholder.empty()
-                subtitle_df = parse_subtitles(vid_url)
-                subtitle_df.to_csv("subtitles.csv")
 
                 if searchphrase:
                     print("\n\n\n Searching", searchphrase)
-                    search_results = get_relevant_line(subtitle_df, searchphrase)
-                    # print(df)
+                    search_results = get_relevant_lines(subtitle_df, searchphrase)
+
                     with analysis_placeholder.container():
                         if len(search_results):
                             st.text("Relevant sections below: ")
@@ -142,14 +160,13 @@ if __name__ == "__main__":
                                         ]
                                     ),
                                 )
-
                                 col2.markdown(cap)
                         else:
                             st.text("No relevant section found, try something else ...")
 
+                # Handle "Jump" button clicks
                 for k, v in st.session_state.items():
                     if k.startswith("Jump") and v is True:
-                        print(k.split(maxsplit=3))
                         _, new_url, start, _ = k.split(maxsplit=3)
                         vid_placeholder.empty()
                         with vid_placeholder.container():
@@ -158,12 +175,13 @@ if __name__ == "__main__":
                                 playing=True,
                             )
 
+                # Generate and display video summary
                 summary = get_summary(vid_url)
                 if summary:
                     st.subheader("Summary of the video: \n\n")
                     st.markdown(summary)
+
     except BaseException as e:
         print(e)
         traceback.print_exc()
-
-        st.text("Some error occured, please ensure youtube URL is correct")
+        st.text("Some error occurred, please ensure YouTube URL is correct")
