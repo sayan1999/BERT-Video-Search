@@ -10,6 +10,8 @@ import streamlit_analytics
 from recursive_summary import Summarizer
 from youtube_transcript_api._errors import NoTranscriptFound
 
+WINDOW_LENGTH = 7
+
 
 @st.cache_resource
 def init():
@@ -96,9 +98,13 @@ def search(subtitle_df, query, top_k, index):
 
 # Function to retrieve relevant lines based on a search phrase
 @st.cache_data
-def get_relevant_lines(subtitle_df, search_phrase):
-    index = store_embeddings(subtitle_df)
-    return search(subtitle_df, search_phrase, 6, index)
+def get_relevant_lines(subtitle_df, search_phrase, window_length):
+    df = subtitle_df.copy()
+    df["text"] = df["text"].astype(str)
+    df["start"] = (df["start"] // window_length) * window_length
+    df = df.groupby("start").agg({"text": " ".join}).reset_index()
+    index = store_embeddings(df)
+    return search(df, search_phrase, 6, index)
 
 
 # --------------------------------------------------
@@ -133,6 +139,10 @@ if __name__ == "__main__":
                     "Enter Search keywords here relevant to the topic you are searching for in this video"
                 )
 
+                context_window_duration = st.number_input(
+                    "Enter context window duration in seconds", min_value=1, value=10
+                )
+
                 # Handle subtitle parsing and analysis
                 analysis_placeholder = st.empty()  # Container for analysis results
                 analysis_placeholder.empty()
@@ -141,7 +151,9 @@ if __name__ == "__main__":
 
                 if searchphrase:
                     print("\n\n\n Searching", searchphrase)
-                    search_results = get_relevant_lines(subtitle_df, searchphrase)
+                    search_results = get_relevant_lines(
+                        subtitle_df, searchphrase, context_window_duration
+                    )
 
                     with analysis_placeholder.container():
                         if len(search_results):

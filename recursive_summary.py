@@ -4,7 +4,6 @@ from dotenv import load_dotenv
 import streamlit as st
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from huggingface_hub import InferenceClient
 import tiktoken
 
 MAX_INPUT_SIZE = 30000
