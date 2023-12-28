@@ -13,6 +13,12 @@ Check Out the configuration reference at https://huggingface.co/docs/hub/spaces-
 
 ## Bert-Video-Search-and-Jump
 
+### Demo link
+
+https://huggingface.co/spaces/Instantaneous1/bert-video-search-and-jump
+
+![Demo](ui.png)
+
 ### An AI-powered web app to semantically search and navigate YouTube videos with ease.
 
 ### Features
@@ -34,7 +40,3 @@ Text summarization techniques
 Clone this repository
 Install dependencies: pip install -r requirements.txt
 Run the app: streamlit run app.py
-
-### Demo
-
-![Demo](ui.png)
