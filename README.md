@@ -32,7 +32,8 @@ Check Out the configuration reference at https://huggingface.co/docs/hub/spaces-
 
 1. Clone this repository.
 2. Install required dependencies: `pip install -r requirements.txt`
-3. Run the app: `streamlit run app.py`
+3. Save your gemini secrets in `.streamlit/secrets.toml` file as `GOOGLE_API_KEY = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"`
+4. Run the app: `streamlit run app.py`
 
 ## Demo
 
