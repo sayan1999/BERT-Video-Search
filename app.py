@@ -13,7 +13,9 @@ from youtube_transcript_api._errors import NoTranscriptFound
 
 @st.cache_resource
 def init():
-    summarizer = Summarizer()  # Summarizer for generating concise summaries
+    summarizer = (
+        Summarizer.get_singleton()
+    )  # Summarizer for generating concise summaries
     model = SentenceTransformer(
         "msmarco-distilbert-base-dot-prod-v3"
     )  # SentenceTransformer model for semantic search
@@ -126,15 +128,16 @@ if __name__ == "__main__":
                 with vid_placeholder.container():
                     st_player(vid_url, playing=True)
 
-                # Handle subtitle parsing and analysis
-                analysis_placeholder = st.empty()  # Container for analysis results
-                subtitle_df = parse_subtitles(vid_url)  # Parse subtitles
-                subtitle_df.to_csv("subtitles.csv")  # Save subtitles to CSV
-
                 # Prompt for search phrase
                 searchphrase = st.text_input(
                     "Enter Search keywords here relevant to the topic you are searching for in this video"
                 )
+
+                # Handle subtitle parsing and analysis
+                analysis_placeholder = st.empty()  # Container for analysis results
+                analysis_placeholder.empty()
+                subtitle_df = parse_subtitles(vid_url)  # Parse subtitles
+                subtitle_df.to_csv("subtitles.csv")  # Save subtitles to CSV
 
                 if searchphrase:
                     print("\n\n\n Searching", searchphrase)
@@ -149,7 +152,7 @@ if __name__ == "__main__":
                             ):
                                 col1, col2 = st.columns([1, 4])
                                 col1.button(
-                                    "Jump to section ",
+                                    "Jump to ",
                                     key=" ".join(
                                         [
                                             "Jump",
