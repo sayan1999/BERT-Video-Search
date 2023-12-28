@@ -18,6 +18,7 @@ Check Out the configuration reference at https://huggingface.co/docs/hub/spaces-
 ## Demo
 
 Demo link: https://huggingface.co/spaces/Instantaneous1/bert-video-search-and-jump
+
 ![Demo](ui.png)
 
 ## Key Features
