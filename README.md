@@ -15,6 +15,11 @@ Check Out the configuration reference at https://huggingface.co/docs/hub/spaces-
 
 **An AI-powered web app to search and navigate YouTube videos with ease.**
 
+## Demo
+
+Demo link: https://huggingface.co/spaces/Instantaneous1/bert-video-search-and-jump
+![Demo](ui.png)
+
 ## Key Features
 
 - **Downloads subtitles** from YouTube videos.
@@ -34,8 +39,3 @@ Check Out the configuration reference at https://huggingface.co/docs/hub/spaces-
 2. Install required dependencies: `pip install -r requirements.txt`
 3. Save your gemini secrets in `.streamlit/secrets.toml` file as `GOOGLE_API_KEY = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"`
 4. Run the app: `streamlit run app.py`
-
-## Demo
-
-Demo link: https://huggingface.co/spaces/Instantaneous1/bert-video-search-and-jump
-![Demo](ui.png)
