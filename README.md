@@ -37,4 +37,4 @@ Run the app: streamlit run app.py
 
 ### Demo
 
-[Demo](ui.png)
+![Demo](ui.png)
